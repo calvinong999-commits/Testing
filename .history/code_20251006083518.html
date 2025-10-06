@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Absensi Submit</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+  <style>
+    /* Tombol kamera */
+#reader button:nth-child(1) {
+  background-color: #007bff !important; /* biru */
+  color: white !important;
+  border: none !important;
+  padding: 10px 18px !important;
+  border-radius: 8px !important;
+  margin: 5px !important;
+  font-weight: bold !important;
+  cursor: pointer !important;
+}
+#reader button:nth-child(1):hover {
+  background-color: #0056b3 !important;
+}
+
+/* Tombol scan file */
+#reader button:nth-child(2) {
+  background-color: #28a745 !important; /* hijau */
+  color: white !important;
+  border: none !important;
+  padding: 10px 18px !important;
+  border-radius: 8px !important;
+  margin: 5px !important;
+  font-weight: bold !important;
+  cursor: pointer !important;
+}
+#reader button:nth-child(2):hover {
+  background-color: #1e7e34 !important;
+}
+
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 0;
+      padding: 0;
+      background: url("S.png") no-repeat center center fixed;
+      background-size: cover;
+      color: rgb(0, 0, 0);
+    }
+    .overlay {
+      background: rgba(0, 0, 0, 0.6);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+    h2 {
+      margin-bottom: 20px;
+      font-size: 28px;
+      font-weight: bold;
+    }
+    #reader {
+      width: 300px;
+      background: white;
+      padding: 15px;
+      border-radius: 15px;
+      box-shadow: 0px 4px 20px rgba(0,0,0,0.6);
+      margin-bottom: 20px;
+    }
+    #result {
+      font-size: 18px;
+      background: rgba(255,255,255,0.2);
+      padding: 10px 15px;
+      border-radius: 10px;
+      margin-top: 15px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="overlay">
+    <h2>📷 Scan QR Absensi</h2>
+    <div id="reader"></div>
+    <p id="result">Hasil scan muncul di sini...</p>
+  </div>
+
+  <script>
+    const secretKey = "S3kolahKu1234567"; // harus sama dengan generator
+
+    // FORM ACTION (ganti sesuai gform kamu)
+    const formAction = "https://docs.google.com/forms/d/e/1FAIpQLSeIupsD6zxTj9ijet02wZHhj9ea68PSQcQ2WeDUrdtUk0l9CQ/formResponse";
+
+    // Mapping entry (ganti sesuai kolom di gform)
+    const entryKelas = "entry.1008048530";
+    const entryNama  = "entry.442068450";
+    const entryStatus = "entry.160572145";
+
+    function decryptData(ciphertext) {
+      try {
+        let bytes = CryptoJS.AES.decrypt(ciphertext, secretKey);
+        return bytes.toString(CryptoJS.enc.Utf8);
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function submitToForm(kelas, nama, status) {
+      const formData = new FormData();
+      formData.append(entryKelas, kelas);
+      formData.append(entryNama, nama);
+      formData.append(entryStatus, status);
+
+      fetch(formAction, {
+        method: "POST",
+        mode: "no-cors",
+        body: formData
+      }).then(() => {
+        document.getElementById("result").innerText =
+          `✅ Terkirim: ${kelas} | ${nama} | ${status}`;
+      }).catch(err => {
+        document.getElementById("result").innerText =
+          "❌ Gagal submit!";
+      });
+    }
+
+    function onScanSuccess(decodedText, decodedResult) {
+      const decrypted = decryptData(decodedText);
+      if (!decrypted) {
+        document.getElementById("result").innerText = "❌ QR tidak valid!";
+        return;
+      }
+
+      // Format data: KELAS|NAMA|STATUS
+      const [kelas, nama, status] = decrypted.split("|");
+
+      document.getElementById("result").innerText = `📌 Data: ${kelas} | ${nama} | ${status}`;
+
+      // Auto submit ke Google Form
+      submitToForm(kelas, nama, status);
+    }
+
+    function onScanFailure(error) { /* biarin kosong */ }
+
+    let html5QrcodeScanner = new Html5QrcodeScanner(
+      "reader", { fps: 10, qrbox: 250 });
+    html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+  </script>
+
+</body>
+</html>
